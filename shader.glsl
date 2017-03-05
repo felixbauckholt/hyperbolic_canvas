@@ -1,5 +1,7 @@
 //#define antialias 4
-#define ITER_L 20
+#define ITER_L 40
+
+#define N 5000
 
 #define complex highp vec2
 #define i_complex highp ivec2
@@ -15,7 +17,7 @@ extern highp number settings;
 extern highp number sides_dirty;
 extern highp number dcount=0;
 
-extern number inverses[265];
+extern number inverses[N];
 extern Image valmap;
 
 
@@ -69,8 +71,8 @@ i_complex i_fix(i_complex a) {
 }
 
 i_complex i_mul(i_complex a, i_complex b) {
-	return ivec2(i_sc_mul(a.x, b.x) + P - i_sc_mul(a.y, b.y),
-	             i_sc_mul(a.x, b.y)     + i_sc_mul(a.y, b.x));
+	return ivec2(i_sc_mul(a.x, b.x) + (P - i_sc_mul(a.y, b.y)),
+	             i_sc_mul(a.x, b.y)      + i_sc_mul(a.y, b.x) );
 }
 
 i_complex i_conj(i_complex a) {
@@ -168,7 +170,7 @@ vec4 getgrid(complex pos) {
 			col++;
 		}
 	}
-	//return vec4(mod(col, 2));
+	return vec4(mod(col, 2));
 	if (pos.x >= 0) col2++;
 	if (pos.y >= 0) col2++;
 	if (abs_sq(pos) >= halfl*halfl) col3++;
@@ -183,7 +185,7 @@ vec4 getpixel(complex pos) {
 	mobius m = m_shift(ivec2(0, 0));
 	pos = transform(pos);
 	number col = dcount;
-	if (mod(dcount, 2) == 0) m = m_mul(m, m_flip());
+	//if (mod(dcount, 2) == 0) m = m_mul(m, m_flip());
 
 	complex rv = expo(vec2(0, PI*2/sides));
 	complex dv = vec2(l, 0);
@@ -196,8 +198,10 @@ vec4 getpixel(complex pos) {
 			if (ctr >= sides) break;
 		} else {
 			ctr = 0;
-			pos = -newpos;
-			m = m_mul(m_flip(), m_mul(m_shift(i_rotate(i_l, i)), m));
+			//pos = -newpos;
+			//m = m_mul(m_flip(), m_mul(m_shift(i_rotate(i_l, i)), m));
+			pos = newpos;
+			m = m_mul(m_shift(i_rotate(i_l, i)), m);
 			col++;
 		}
 	}
@@ -213,6 +217,7 @@ vec4 getpixel(complex pos) {
 		backgtiles = vec4(vec3(i_abs_sq(m_hash))/P, 1);
 	}
 
+	/*
 	if (mod(settings, 3) < 1) {
 		if (pos.x >= 0) col++;
 		if (pos.y >= 0) col++;
@@ -227,6 +232,7 @@ vec4 getpixel(complex pos) {
 		else thecolor.g = thecolor.r;
 		thecolor.b = thecolor.g;
 	}
+	*/
 
 	return 0.9*thecolor + 0.1*backgtiles;
 }
@@ -251,10 +257,10 @@ vec4 effect(vec4 colour, Image img, highp vec2 txy, highp vec2 sxy)
 	vec4 col_b = getgrid(pos + dx);
 	vec4 col_c = getgrid(pos + dy);
 	vec4 col_d = getgrid(pos + dv);
-	if (col_a == col_b && col_b == col_c && col_c == col_d) return getgrid(pos + dv/2);
+	if (col_a == col_b && col_b == col_c && col_c == col_d) return getpixel(pos + dv/2);
 	vec4 col = vec4(0, 0, 0, 0);
 	for (int i=0; i<antialias; i++) for (int j=0; j<antialias; j++) {
-		col += getgrid(pos + dv*vec2(i+.5, j+.5)/antialias);
+		col += getpixel(pos + dv*vec2(i+.5, j+.5)/antialias);
 	}
 	return col/(antialias*antialias);
 #else

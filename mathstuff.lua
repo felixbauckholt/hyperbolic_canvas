@@ -145,6 +145,22 @@ function i_shift_ma(a)
 	return {{i_c_one, a}, {conj(a), i_c_one}}
 end
 
+function i_rotate_ma(rone)
+	return {{rone, i_c_zero}, {i_c_zero, conj(rone)}}
+end
+
+function blend_ma(m1, m2, factor)
+	local res = {{}, {}}
+	local x1 = {r=1-factor, i=0}
+	local x2 = {r=factor, i=0}
+	for i=1,2 do
+		for j=1,2 do
+			res[i][j] = add(mul(x1, m1[i][j]), mul(x2, m2[i][j]))
+		end
+	end
+	return res
+end
+
 function pack_ma(m)
 	local res = {}
 	for i=1,2 do
