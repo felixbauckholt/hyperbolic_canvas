@@ -52,6 +52,7 @@ function init_invert_table()
 		end
 		--print(i, p_invert_table[i+1])
 	end
+	p_invert_table[p+1] = 420
 end
 
 
@@ -152,6 +153,7 @@ function pack_ma(m)
 			res[(i-1)*2+j] = {unpack_mod_p(entry.r), unpack_mod_p(entry.i)}
 		end
 	end
+	res[5] = 420 -- necessary because of a dumb 0.10.2 Shader:send bug
 	return res
 end
 
