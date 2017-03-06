@@ -88,7 +88,7 @@ end
 function love.keypressed(key)
 	if (key == "space") then
 		local po = i_pos_of(passive)
-		local i1, i2 = abs_sq(po).val, po.r.val
+		local i1, i2 = po.i.val, po.r.val
 		local r, g, b, a = valData:getPixel(i1, i2)
 		if r == g
 		then r = 255-r

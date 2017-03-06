@@ -65,7 +65,7 @@ highp int i_sc_mul(highp int a, highp int b) {
 }
 
 i_complex i_fix(i_complex a) {
-	return ivec2(intmod(a.x, P), intmod(a.y, P));
+	return ivec2(intmod(a.x + P, P), intmod(a.y + P, P));
 }
 
 i_complex i_mul(i_complex a, i_complex b) {
@@ -205,7 +205,7 @@ vec4 getpixel(complex pos) {
 
 	m = m_mul(m, m_from(passive_t));
 	i_complex m_hash = i_fix(i_mul(m.zw, i_invert(m.xy)));
-	vec4 thecolor = Texel(valmap, (vec2(i_abs_sq(m_hash), m_hash.x) + 0.5)/P);
+	vec4 thecolor = Texel(valmap, (vec2(m_hash.y, m_hash.x) + 0.5)/P);
 	vec4 backgtiles;
 	if (i_l == 109) {
 		backgtiles = vec4(vec3(mod(col, 2)), 1);
