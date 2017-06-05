@@ -116,10 +116,18 @@ function rotate_scalar(l, turns)
 end
 
 function i_rotate(l, steps)
-	local myl = pack_mod_p(l)
-	local i_i = {r=i_zero, i=i_one}
-	local arr = {i_c_one, i_i, i_c_minusone, mul(i_i, i_c_minusone)}
-	return mul({r=myl, i=i_zero}, arr[(steps % 4) + 1])
+	steps = steps % sides
+	--local myl = pack_mod_p(l)
+	--local zeta = pack_mod_p(i_zeta)
+	local result = {r=pack_mod_p(l), i=i_zero}
+	for i=1,steps do
+		result = mul(result, i_zeta)
+	end
+	return result
+	--return {r=myl, i=i_zero}
+	--local i_i = {r=i_zero, i=i_one}
+	--local arr = {i_c_one, i_i, i_c_minusone, mul(i_i, i_c_minusone)}
+	--return mul({r=myl, i=i_zero}, arr[(steps % 4) + 1])
 end
 
 function distance_of(ma)
@@ -145,6 +153,11 @@ function i_shift_ma(a)
 	return {{i_c_one, a}, {conj(a), i_c_one}}
 end
 
+function i_shift_by_rotated(l, steps)
+	-- hopefully not needed any more
+	return {{i_c_one, i_rotate(l, steps)}, {i_rotate(l, -steps), i_c_one}}
+end
+
 function pack_ma(m)
 	local res = {}
 	for i=1,2 do
@@ -153,7 +166,7 @@ function pack_ma(m)
 			res[(i-1)*2+j] = {unpack_mod_p(entry.r), unpack_mod_p(entry.i)}
 		end
 	end
-	res[5] = 420 -- necessary because of a dumb 0.10.2 Shader:send bug
+	res[5] = {420, 0} -- necessary because of a dumb 0.10.2 Shader:send bug
 	return res
 end
 

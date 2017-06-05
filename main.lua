@@ -1,14 +1,7 @@
 require "mathstuff"
+require "tilings"
 
 
-tilings = {
-	-- {l, sides, p, i_l}
-	{1/3*math.sqrt(3), 4, 251, 109},
-	{math.sqrt(math.sqrt(5) - 2), 4, 239, 56},
-	--{1/2*math.sqrt(2), 6},
-	--{0.5558929702,     5},
-	--{math.sqrt(-2+3/2*math.sqrt(2)), 3},
-}
 
 function setup()
 	local tiling = tilings[(tiling % #tilings) + 1]
@@ -16,11 +9,13 @@ function setup()
 	sides = tiling[2]
 	p = tiling[3]
 	i_l = tiling[4]
+	i_zeta = tiling[5]
+	atvertex = tiling[6]
 	init_invert_table()
 	halfl = (1 - math.sqrt(1-l*l))/l;
 
 	pos = shift_ma(zero)
-	passive = i_shift_ma({r=pack_mod_p(420), i=pack_mod_p(69)})
+	passive = i_shift_ma({r=pack_mod_p(0), i=pack_mod_p(0)})
 	dcount = 0
 
 	valData = love.image.newImageData(p, p)
@@ -70,14 +65,14 @@ function love.update(dt)
 			local ma2 = mul_ma(i_flip, i_shift_ma(i_rotate(i_l, i)))
 			pos = newp
 			passive = mul_ma(ma2, passive)
+			dcount = dcount+1
+		end
 			--print()
 			--for j, x in ipairs(pack_ma(passive)) do
 			--	print(x[1], x[2])
 			--end
 			--local mypos = i_pos_of(passive)
 			--print(mypos.r.val, mypos.i.val)
-			dcount = dcount+1
-		end
 	end
 end
 
@@ -101,6 +96,9 @@ function love.keypressed(key)
 		love.event.quit()
 	elseif (key == "3") then
 		pos = shift_ma(zero)
+	elseif (key == "4") then
+		tiling = tiling + 1
+		setup()
 	end
 end
 
@@ -114,6 +112,8 @@ function love.draw()
 	myShader:send("halfl", halfl)
 	myShader:send("P_dirty", p)
 	myShader:send("i_l_dirty", i_l)
+	myShader:send("i_zeta_dirty", {unpack_mod_p(i_zeta.r), unpack_mod_p(i_zeta.i)})
+	myShader:send("atvertex", atvertex)
 	myShader:send("dcount", dcount)
 	myShader:send("sides_dirty", sides)
 	myShader:send("thetransform", unpack(pack_ma(pos)))
@@ -133,4 +133,9 @@ function love.draw()
 	--love.graphics.print(pos[1][2].r.." + "..pos[1][2].i.."i", 0, 30)
 	--love.graphics.print(pos[2][1].r.." + "..pos[2][1].i.."i", 0, 45)
 	--love.graphics.print(pos[2][2].r.." + "..pos[2][2].i.."i", 0, 60)
+	love.graphics.print("hash: "..i_pos_of(passive).r.val.." + "..i_pos_of(passive).i.val.."i", 0, 15)
+	love.graphics.print(passive[1][1].r.val.." + "..passive[1][1].i.val.."i", 0, 30)
+	love.graphics.print(passive[1][2].r.val.." + "..passive[1][2].i.val.."i", 0, 45)
+	love.graphics.print(passive[2][1].r.val.." + "..passive[2][1].i.val.."i", 0, 60)
+	love.graphics.print(passive[2][2].r.val.." + "..passive[2][2].i.val.."i", 0, 75)
 end

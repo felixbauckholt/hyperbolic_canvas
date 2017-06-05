@@ -13,6 +13,7 @@ extern highp number l;
 extern highp number halfl;
 extern highp number settings;
 extern highp number sides_dirty;
+extern highp number atvertex;
 extern highp number dcount=0;
 
 extern number inverses[265];
@@ -21,9 +22,11 @@ extern Image valmap;
 
 extern highp number P_dirty; // = 251;
 extern highp number i_l_dirty; // = 109;
+extern highp complex i_zeta_dirty;
 
 highp int P;
 highp int i_l;
+highp i_complex i_zeta;
 highp int sides;
 
 extern complex midpoint;
@@ -90,9 +93,15 @@ i_complex i_invert(i_complex a) {
 	return a;
 }
 
-ivec2 _rotations[4];
 i_complex i_rotate(highp int x, highp int dir) {
-	return ivec2(P) + x*_rotations[intmod(dir, 4)];
+	i_complex c = ivec2(x, 0);
+	for (int i=0; i<intmod(dir, 4); i++) {
+		//x = i_sc_mul(x, i_zeta);
+		c = i_mul(c, i_zeta);
+	}
+	return c;
+	//return ivec2(x, 0);
+	//return ivec2(P) + x*_rotations[intmod(dir, 4)];
 }
 
 mobius m_pack(i_complex a, i_complex b) { //internal
@@ -207,7 +216,7 @@ vec4 getpixel(complex pos) {
 	i_complex m_hash = i_fix(i_mul(m.zw, i_invert(m.xy)));
 	vec4 thecolor = Texel(valmap, (vec2(m_hash.y, m_hash.x) + 0.5)/P);
 	vec4 backgtiles;
-	if (i_l == 109) {
+	if (intmod(int(atvertex), 2) == 0) {
 		backgtiles = vec4(vec3(mod(col, 2)), 1);
 	} else {
 		backgtiles = vec4(vec3(i_abs_sq(m_hash))/P, 1);
@@ -233,12 +242,9 @@ vec4 getpixel(complex pos) {
 
 vec4 effect(vec4 colour, Image img, highp vec2 txy, highp vec2 sxy)
 {
-	_rotations[0] = ivec2(1, 0);
-	_rotations[1] = ivec2(0, 1);
-	_rotations[2] = ivec2(-1, 0);
-	_rotations[3] = ivec2(0, -1);
 	sides = int(sides_dirty);
 	P = int(P_dirty);
+	i_zeta = ivec2(i_zeta_dirty);
 	i_l = int(i_l_dirty);
 
 	complex pos = (sxy - midpoint)/screenr;
