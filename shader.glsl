@@ -1,4 +1,14 @@
+/*
+ * The quality level of antialiasing. Low levels look bad, while high levels
+ * use a lot of resources, so we use no antialiasing at all.
+ */
 //#define antialias 4
+
+/*
+ * The number of iterations. Since for any tiling, most visible tiles are only
+ * a few steps away from the center, changing this number only affects some
+ * pixels at the margin.
+ */
 #define ITER_L 20
 
 #define complex highp vec2
@@ -12,16 +22,16 @@ extern highp number PI=0;
 extern highp number l;
 extern highp number halfl;
 extern highp number settings;
-extern highp number sides_dirty;
 extern highp number atvertex;
 extern highp number dcount=0;
 
 extern number inverses[265];
 extern Image valmap;
 
-
-extern highp number P_dirty; // = 251;
-extern highp number i_l_dirty; // = 109;
+// Unfortunately, love doesn't permit sending integers, so we take floats and convert them to integers.
+extern highp number sides_dirty;
+extern highp number P_dirty;
+extern highp number i_l_dirty;
 extern highp complex i_zeta_dirty;
 
 highp int P;
@@ -32,6 +42,7 @@ highp int sides;
 extern complex midpoint;
 extern highp number screenr;
 
+// The following functions should correspond to the functions in mathstuff.lua
 complex conj(complex a) {
 	return vec2(a.x, -a.y);
 }
@@ -96,15 +107,13 @@ i_complex i_invert(i_complex a) {
 i_complex i_rotate(highp int x, highp int dir) {
 	i_complex c = ivec2(x, 0);
 	for (int i=0; i<intmod(dir, 4); i++) {
-		//x = i_sc_mul(x, i_zeta);
 		c = i_mul(c, i_zeta);
 	}
 	return c;
-	//return ivec2(x, 0);
-	//return ivec2(P) + x*_rotations[intmod(dir, 4)];
 }
 
-mobius m_pack(i_complex a, i_complex b) { //internal
+// Integer Mobius transformations get packed into an ivec4 for efficiency.
+mobius m_pack(i_complex a, i_complex b) {
 	mobius result;
 	result.xy = a;
 	result.zw = b;
@@ -157,6 +166,7 @@ complex transform(complex z) {
 	    invert(mul(z, thetransform[2]) + thetransform[3]));
 }
 
+// Some hack I tried to use to get antialiasing to work nicer. Not up to date any more.
 vec4 getgrid(complex pos) {
 	pos = 1.05*pos;
 	if (abs_sq(pos) >= 1) return vec4(0.5, 0.5, 0.5, 0.5);
@@ -185,13 +195,24 @@ vec4 getgrid(complex pos) {
 }
 
 
+/*
+ * The main algorithm. This takes a point on the complex plane, then computes
+ * what tile it belongs to, and then computes the color.
+ */
 vec4 getpixel(complex pos) {
+	// add margins
 	pos = 1.05*pos;
+	// color things outside the disk grey.
 	if (abs_sq(pos) >= 1) return vec4(0.5, 0.5, 0.5, 0.5);
+	// draw a red circle in the center because why not
 	if (abs_sq(pos) <= 0.0002) return vec4(1, 0, 0, 1);
-	mobius m = m_shift(ivec2(0, 0));
+	// move everything in a direction indicated by thetransform
 	pos = transform(pos);
+
+	// dcount indicates if the center point is on an "even" or "odd" tile (if defined)
 	number col = dcount;
+	// the integer Mobius transformation that will give the "tile ID" of the current tile
+	mobius m = m_shift(ivec2(0, 0));
 	if (mod(dcount, 2) == 0) m = m_mul(m, m_flip());
 
 	complex rv = expo(vec2(0, PI*2/sides));
@@ -201,9 +222,12 @@ vec4 getpixel(complex pos) {
 		dv = mul(dv, rv);
 		complex newpos = doshift(pos, dv);
 		if (abs_sq(newpos) >= abs_sq(pos)) {
+			// newpos isn't closer to the center than the old pos.
+			// If this happens more than "sides" times, we are done.
 			ctr++;
 			if (ctr >= sides) break;
 		} else {
+			// newpos is closer to the center. Move there, and update m
 			ctr = 0;
 			pos = -newpos;
 			m = m_mul(m_flip(), m_mul(m_shift(i_rotate(i_l, i)), m));
@@ -212,9 +236,13 @@ vec4 getpixel(complex pos) {
 	}
 	
 
+	// m_hash is the "tile ID" of the current tile
 	m = m_mul(m, m_from(passive_t));
 	i_complex m_hash = i_fix(i_mul(m.zw, i_invert(m.xy)));
+
+	// look up info about this tile from a big texture
 	vec4 thecolor = Texel(valmap, (vec2(m_hash.y, m_hash.x) + 0.5)/P);
+	// color the background somehow
 	vec4 backgtiles;
 	if (intmod(int(atvertex), 2) == 0) {
 		backgtiles = vec4(vec3(mod(col, 2)), 1);
@@ -222,6 +250,7 @@ vec4 getpixel(complex pos) {
 		backgtiles = vec4(vec3(i_abs_sq(m_hash))/P, 1);
 	}
 
+	// depending on "settings", draw some nice patterns
 	if (mod(settings, 3) < 1) {
 		if (pos.x >= 0) col++;
 		if (pos.y >= 0) col++;
@@ -240,6 +269,8 @@ vec4 getpixel(complex pos) {
 	return 0.9*thecolor + 0.1*backgtiles;
 }
 
+// The main entry point.
+// This should be self-explanatory, except for the antialiasing part, which is deprecated.
 vec4 effect(vec4 colour, Image img, highp vec2 txy, highp vec2 sxy)
 {
 	sides = int(sides_dirty);
