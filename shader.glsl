@@ -11,36 +11,36 @@
  */
 #define ITER_L 20
 
-#define complex highp vec2
-#define i_complex highp ivec2
-#define mobius highp ivec4
+#define complex vec2
+#define i_complex ivec2
+#define mobius ivec4
 
 
 extern complex thetransform[4];
 extern complex passive_t[4];
-extern highp number PI=0;
-extern highp number l;
-extern highp number halfl;
-extern highp number settings;
-extern highp number atvertex;
-extern highp number dcount=0;
+extern number PI=0;
+extern number l;
+extern number halfl;
+extern number settings;
+extern number atvertex;
+extern number dcount=0;
 
 extern number inverses[265];
 extern Image valmap;
 
 // Unfortunately, love doesn't permit sending integers, so we take floats and convert them to integers.
-extern highp number sides_dirty;
-extern highp number P_dirty;
-extern highp number i_l_dirty;
-extern highp complex i_zeta_dirty;
+extern number sides_dirty;
+extern number P_dirty;
+extern number i_l_dirty;
+extern complex i_zeta_dirty;
 
-highp int P;
-highp int i_l;
-highp i_complex i_zeta;
-highp int sides;
+int P;
+int i_l;
+i_complex i_zeta;
+int sides;
 
 extern complex midpoint;
-extern highp number screenr;
+extern number screenr;
 
 // The following functions should correspond to the functions in mathstuff.lua
 complex conj(complex a) {
@@ -58,7 +58,7 @@ complex expo(complex a)
 	return l*vec2(cos(a.y), sin(a.y));
 }
 
-highp number abs_sq(complex xy)
+number abs_sq(complex xy)
 {
 	return xy.x*xy.x + xy.y*xy.y;
 }
@@ -69,11 +69,11 @@ complex invert(complex xy)
 	return (1./a)*conj(xy);
 }
 
-highp int intmod(highp int x, highp int m) {
+int intmod(int x, int m) {
 	return x - m*(x/m);
 }
 
-highp int i_sc_mul(highp int a, highp int b) {
+int i_sc_mul(int a, int b) {
 	a = intmod(a, P); b = intmod(b, P);
 	return intmod(a*b, P);
 }
@@ -91,20 +91,20 @@ i_complex i_conj(i_complex a) {
 	return ivec2(a.x, P-a.y);
 }
 
-highp int i_abs_sq(i_complex a) {
+int i_abs_sq(i_complex a) {
 	return intmod(i_mul(a, i_conj(a)).x, P);
 }
 
 i_complex i_invert(i_complex a) {
-	highp int len = i_abs_sq(a);
-	highp int ilen = highp int(inverses[len]);
+	int len = i_abs_sq(a);
+	int ilen = int(inverses[len]);
 	a = i_conj(a);
 	a.x = i_sc_mul(a.x, ilen);
 	a.y = i_sc_mul(a.y, ilen);
 	return a;
 }
 
-i_complex i_rotate(highp int x, highp int dir) {
+i_complex i_rotate(int x, int dir) {
 	i_complex c = ivec2(x, 0);
 	for (int i=0; i<intmod(dir, 4); i++) {
 		c = i_mul(c, i_zeta);
@@ -271,7 +271,7 @@ vec4 getpixel(complex pos) {
 
 // The main entry point.
 // This should be self-explanatory, except for the antialiasing part, which is deprecated.
-vec4 effect(vec4 colour, Image img, highp vec2 txy, highp vec2 sxy)
+vec4 effect(vec4 colour, Image img, vec2 txy, vec2 sxy)
 {
 	sides = int(sides_dirty);
 	P = int(P_dirty);

@@ -19,7 +19,7 @@ function setup()
 	dcount = 0
 
 	valData = love.image.newImageData(p, p)
-	valData:mapPixel(function() return 0, 0, 0, 255 end)
+	valData:mapPixel(function() return 0, 0, 0, 1 end)
 	valImg = love.graphics.newImage(valData)
 end
 
@@ -86,12 +86,11 @@ function love.keypressed(key)
 		local i1, i2 = po.i.val, po.r.val
 		local r, g, b, a = valData:getPixel(i1, i2)
 		if r == g
-		then r = 255-r
-		else g = 255-g
+		then r = 1-r
+		else g = 1-g
 		end
-		--r, g, b = 255-r, 255-g, 255-b
 		valData:setPixel(i1, i2, r, g, b, a)
-		valImg:refresh()
+		valImg:replacePixels(valData)
 	elseif (key == "escape") then
 		love.event.quit()
 	elseif (key == "3") then

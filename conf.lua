@@ -7,7 +7,7 @@ function love.conf(t)
     t.window.resizable = true
 
 
-    t.version = "0.10.1"
+    t.version = "11.1"
 
     t.modules.joystick = false
     t.modules.physics = false
