@@ -1,19 +1,6 @@
 require "mathstuff"
+require "tilings"
 
-
-tilings = {
-	-- {l, sides, p, i_l, i_isqrt2}
-	{1/3*math.sqrt(3), 4, 241, 99, 11},
-	{math.sqrt(math.sqrt(5) - 2), 4, 239, 56, 169},
-	--{1/3*math.sqrt(3), 4, 25439, 3997, 4722},
-	--{math.sqrt(math.sqrt(5) - 2), 4, 25583, 12397, 4926},
-	--{1/3*math.sqrt(3), 4, 4951, 125, 2822},
-	--{math.sqrt(math.sqrt(5) - 2), 4, 4993, 422, 801},
-
-	--{1/2*math.sqrt(2), 6},
-	--{0.5558929702,     5},
-	--{math.sqrt(-2+3/2*math.sqrt(2)), 3},
-}
 
 function love.load()
 	speed = 1.5
@@ -35,17 +22,19 @@ function setup()
 	sides = tiling[2]
 	p = tiling[3]
 	i_l = tiling[4]
-	i_isqrt2 = tiling[5]
+	i_zeta = tiling[5]
+	i_sqrt_zeta = tiling[6]
+	atvertex = tiling[7]
 	init_invert_table()
 	halfl = (1 - math.sqrt(1-l*l))/l;
 
 	pos = shift_ma(zero)
-	passive = i_shift_ma({r=pack_mod_p(420), i=pack_mod_p(69)})
+	passive = i_shift_ma({r=pack_mod_p(0), i=pack_mod_p(0)})
 	dcount = 0
 	curtime = steptime
 
 	valData = love.image.newImageData(p, p)
-	valData:mapPixel(function() return 0, 0, 0, 255 end)
+	valData:mapPixel(function() return 0, 0, 0, 1 end)
 	valImg = love.graphics.newImage(valData)
 end
 
@@ -83,14 +72,14 @@ function love.update(dt)
 			local ma2 = mul_ma(i_flip, i_shift_ma(i_rotate(i_l, i)))
 			pos = newp
 			passive = mul_ma(ma2, passive)
+			dcount = dcount+1
+		end
 			--print()
 			--for j, x in ipairs(pack_ma(passive)) do
 			--	print(x[1], x[2])
 			--end
 			--local mypos = i_pos_of(passive)
 			--print(mypos.r.val, mypos.i.val)
-			dcount = dcount+1
-		end
 	end
 	--]]
 	curtime = curtime - dt
@@ -101,16 +90,16 @@ function love.update(dt)
 		--local ma = mul_ma(shift_ma(rotate_scalar(l, 0)), flip)
 		--local ma2 = mul_ma(i_flip, i_shift_ma(i_rotate(i_l, 0)))
 		
-		local spooky_one = {r=pack_mod_p(i_isqrt2), i=pack_mod_p(i_isqrt2)}
+		local i_rotation = i_sqrt_zeta
 		local ang = 1/4
 		flip_pixel(true)
 		local newcol = flip_pixel()
-		if (newcol == 255) then
-			spooky_one = conj(spooky_one)
+		if (newcol == 1) then
+			i_rotation = conj(i_rotation)
 			ang = -ang
 		end
 		local ma = mul_ma(shift_ma(rotate_scalar(l, 0)), rotate_ma(ang))
-		local ma2 = mul_ma(i_shift_ma(i_rotate(i_l, 1)), i_rotate_ma(spooky_one))
+		local ma2 = mul_ma(i_shift_ma(i_rotate(i_l, 1)), i_rotate_ma(i_rotation))
 		pos = mul_ma(ma, pos)
 		passive = mul_ma(ma2, passive)
 		flip_pixel(true)
@@ -121,18 +110,14 @@ function love.update(dt)
 	end
 end
 
-function flip_pixel(bla)
+function flip_pixel(changing_ant_status)
 	local po = i_pos_of(passive)
-	local i1, i2 = abs_sq(po).val, po.r.val
+	local i1, i2 = po.i.val, po.r.val
 	local r, g, b, a = valData:getPixel(i1, i2)
-	--if r == g
-	--then r = 255-r
-	--else g = 255-g
-	--end
-	r, g, b = 255-r, 255-g, 255-b
-	if bla then r, g = 255-r, 255-g end
+	r, g, b = 1-r, 1-g, 1-b
+	if changing_ant_status then r, g = 1-r, 1-g end
 	valData:setPixel(i1, i2, r, g, b, a)
-	valImg:refresh()
+	valImg:replacePixels(valData)
 	return r, g, b
 end
 
@@ -147,6 +132,9 @@ function love.keypressed(key)
 		love.event.quit()
 	elseif (key == "3") then
 		pos = shift_ma(zero)
+	elseif (key == "4") then
+		tiling = tiling + 1
+		setup()
 	end
 end
 
@@ -160,6 +148,8 @@ function love.draw()
 	--myShader:send("halfl", halfl)
 	myShader:send("P_dirty", p)
 	myShader:send("i_l_dirty", i_l)
+	myShader:send("i_zeta_dirty", {unpack_mod_p(i_zeta.r), unpack_mod_p(i_zeta.i)})
+	myShader:send("atvertex", atvertex)
 	myShader:send("dcount", dcount)
 	myShader:send("sides_dirty", sides)
 	myShader:send("thetransform", unpack(pack_ma(pos)))

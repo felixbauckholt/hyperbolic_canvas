@@ -2,13 +2,13 @@ zero = {r=0, i=0}
 one = {r=1, i=0}
 minusone = {r=-1, i=0}
 
---p = 251
---i_l = 109
-
 mod_p = {}
 
 function pack_mod_p(x)
-	--local res = {val = (x + p) % p}
+	-- Create number "modulo p" (using the global variable p)
+	-- p doesn't need to be defined (or set to a consistent value) when this
+	--  function is called, it is only used when performing arithmetic on
+	--  the return value.
 	local res = {val = x}
 	setmetatable(res, mod_p)
 	return res
@@ -42,20 +42,22 @@ i_c_minusone = {r=pack_mod_p(-1), i=i_zero}
 
 
 function init_invert_table()
+	-- Initialize table of inverses modulo p
+	-- This table will get sent to the shader to perform division mod p.
 	p_invert_table = {0}
 	for i=1, p-1 do
 		for j=1, p-1 do
 			if (i*j) % p == 1 then
-				--print(i, j)
 				p_invert_table[i+1] = j
 			end
 		end
-		--print(i, p_invert_table[i+1])
 	end
-	p_invert_table[p+1] = 420
+	p_invert_table[p+1] = 0 -- dummy value necessary because of a dumb 0.10.2 Shader:send bug
 end
 
 
+-- Functions for complex numbers
+-- The real and imaginary parts are either floats, or integers mod p.
 function add(a, b)
 	return {r=a.r+b.r, i=a.i+b.i}
 end
@@ -72,21 +74,6 @@ function conj(a)
 	return {r=a.r, i=-a.i}
 end
 
-function mul_ma(a, b)
-	local result = {{}, {}}
-	for i=1,2 do
-		for j=1,2 do
-			--local entry = zero
-			--for k=1,2 do
-			--	entry = add(entry, mul(a[i][k], b[k][j]))
-			--end
-			local entry = add(mul(a[i][1], b[1][j]), mul(a[i][2], b[2][j]))
-			result[i][j] = entry
-		end
-	end
-	return result
-end
-
 function abs_sq(a)
 	return a.r*a.r + a.i*a.i
 end
@@ -97,12 +84,27 @@ function invert(a)
 end
 
 function i_invert(a)
+	-- special case for integers mod p
 	local l = abs_sq(a)
 	local il = pack_mod_p(p_invert_table[l.val+1])
 	return {r=a.r*il, i=-a.i*il}
 end
 
+function mul_ma(a, b)
+	-- multiply 2x2-matrices
+	local result = {{}, {}}
+	for i=1,2 do
+		for j=1,2 do
+			local entry = add(mul(a[i][1], b[1][j]), mul(a[i][2], b[2][j]))
+			result[i][j] = entry
+		end
+	end
+	return result
+end
+
 function normalize(ma)
+	-- perform magic on a matrix representing a Mobius transform to get an
+	--  equivalent matrix whose numbers aren't too big or too small
 	local first = ma[1][1]
 	local l = math.sqrt(first.r*first.r + first.i*first.i)
 	if (l < 2 and l > 0.1) then return ma end
@@ -111,15 +113,25 @@ function normalize(ma)
 end
 
 function rotate_scalar(l, turns)
+	-- "rotate" a scalar by a some angle (in turns), resulting in a complex
+	--  number
 	local ang = turns*2*math.pi
 	return {r=l*math.cos(ang), i=l*math.sin(ang)}
 end
 
 function i_rotate(l, steps)
-	local myl = pack_mod_p(l)
-	local i_i = {r=i_zero, i=i_one}
-	local arr = {i_c_one, i_i, i_c_minusone, mul(i_i, i_c_minusone)}
-	return mul({r=myl, i=i_zero}, arr[(steps % 4) + 1])
+	-- "rotate" an integer mod p by a multiple of some angle chosen in the
+	--  "tilings" file
+	-- To do that, we repeatedly multiply it by some "complex integer mod p"
+	--  i_zeta. It is guaranteed that i_invert(i_zeta) = conj(i_zeta), so we
+	--  have conj(i_rotate(l, steps)) = i_rotate(l, -steps).
+	-- l must be an integer (as opposed to an integer mod p)
+	steps = steps % sides
+	local result = {r=pack_mod_p(l), i=i_zero}
+	for i=1,steps do
+		result = mul(result, i_zeta)
+	end
+	return result
 end
 
 function distance_of(ma)
@@ -136,6 +148,11 @@ function shift_ma(a)
 end
 
 function rotate_ma(turns)
+	-- a rotation matrix
+	-- I choose a matrix of the form [[e^{i x/2}, 0], [0, e^{-i x/2}]]
+	--  as opposed to of the form [[e^x, 0], [0, 1]] because it makes the
+	--  computed matrices look nicer (the bottom entries will always be
+	--  conjugates of the top entries).
 	turns = turns/2
 	local rone = rotate_scalar(1, turns)
 	return {{rone, zero}, {zero, conj(rone)}}
@@ -162,6 +179,7 @@ function blend_ma(m1, m2, factor)
 end
 
 function pack_ma(m)
+	-- convert a matrix so that it can be sent to a shader
 	local res = {}
 	for i=1,2 do
 		for j=1,2 do
@@ -169,7 +187,7 @@ function pack_ma(m)
 			res[(i-1)*2+j] = {unpack_mod_p(entry.r), unpack_mod_p(entry.i)}
 		end
 	end
-	res[5] = 420 -- necessary because of a dumb 0.10.2 Shader:send bug
+	res[5] = {420, 0} -- necessary because of a dumb 0.10.2 Shader:send bug
 	return res
 end
 
