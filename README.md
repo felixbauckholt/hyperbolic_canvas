@@ -6,6 +6,9 @@ and change the color of the tile you're on.
 The tiling is infinite, but whenever you change the color of your tile, you also
 change the color of some "random" tiles far, far away.
 
+For a demo see [this](https://youtu.be/uFkKjt5eWlI)
+and [this demo of the `langtons-ant` branch](https://youtu.be/KTXiwg8_cLk).
+
 ## How to use it
 
 1. Install [love](http://love2d.org)
